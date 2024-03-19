@@ -1,0 +1,4 @@
+repository "SpinnerUp_Multplayer_AR@SpinnerUp@cloud"
+  path "/"
+    br "/main"
+    co "/main"
