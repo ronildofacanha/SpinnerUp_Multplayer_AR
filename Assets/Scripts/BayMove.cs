@@ -31,30 +31,38 @@ public class BayMove : MonoBehaviour
 
 
     [Header("BATTLE CONfIG")]
-    public GameManager BattleSystem;
+    public float angularForce = 10.0f; // Força angular
+    public float forcaDeImpacto = 0.5f;
+    public float ajusteDoMovimento = 0.1f;
+    public float fricSpeed = 0.3f;
+    public float minRPS = 0.5f;
+    public float timeOff = 0.6f;
+    public float RPM = 60f; // Rotação por minuto
+    public float RPS_MAX = 3.6f;
+    public float rotationSpeedMax = 50f;
+    public float speedMovementMax = 50f;
+    public float impulseMax = 50f;
+    public float distanceOnGround = 1f;
+    public float downForce = 1.0f;
 
 
     // [private]
     private Rigidbody rb;
 
-    void StartBattleSystem()
-    {
-        BattleSystem = FindObjectOfType<GameManager>();
-    }
     void Start()
     {
         // PLAYER
         rb = GetComponent<Rigidbody>();
         rb.mass = bayMass;
         spinLife = RPS * 1000;
-        StartBattleSystem();
     }
 
     void Update() // mudar para fixed
     {
         if (!bayBreak)
         {
-            BayMovement();
+            SpinForce();
+            Movimento();
             BayOnFloor();
             SpinLifeUpDate();
             GravitForce();
@@ -66,14 +74,14 @@ public class BayMove : MonoBehaviour
         if (collision.gameObject.CompareTag("Player"))
         {
             isBattle = true;
-            
+
             _reverseDirection = (transform.position - collision.transform.position).normalized;
 
             // float _damageAttack = collision.gameObject.GetComponent<BayMove>().damageAttack;
             float _sMov = collision.gameObject.GetComponent<BayMove>()._speedMovement;
             float _sRotation = collision.gameObject.GetComponent<BayMove>()._speedRotation;
 
-            impulseTotal = (_sMov * _sRotation * BattleSystem.forcaDeImpacto);
+            impulseTotal = (_sMov * _sRotation * forcaDeImpacto);
 
             rb.AddForce(_reverseDirection * ImpulsoMax(impulseTotal), ForceMode.Impulse);
 
@@ -91,9 +99,9 @@ public class BayMove : MonoBehaviour
         {
             valor = valor * -1;
         }
-        if (valor >= BattleSystem.impulseMax)
+        if (valor >= impulseMax)
         {
-            valor = BattleSystem.impulseMax;
+            valor = impulseMax;
         }
         if (valor <= 1)
         {
@@ -150,7 +158,7 @@ public class BayMove : MonoBehaviour
     {
         RPS = spinLife / 1000; // atualização
 
-        float _movement = (rb.velocity.magnitude * BattleSystem.fricSpeed) * (60 * Time.deltaTime);
+        float _movement = (rb.velocity.magnitude * fricSpeed) * (60 * Time.deltaTime);
 
         setDamage(_movement); // Perdendo vida por segundo e movimento
 
@@ -160,13 +168,13 @@ public class BayMove : MonoBehaviour
         }
     }
 
-    void BayMovement()
+    void SpinForce()
     {
-        _speedRotation = (RPS * BattleSystem.RPM * BattleSystem.angularForce * Time.deltaTime) * sentido;
+        _speedRotation = (RPS * RPM * angularForce * Time.deltaTime) * sentido;
 
-        if (_speedRotation > BattleSystem.rotationSpeedMax)
+        if (_speedRotation > rotationSpeedMax)
         {
-            _speedRotation = BattleSystem.rotationSpeedMax;
+            _speedRotation = rotationSpeedMax;
             rb.transform.Rotate(0, _speedRotation, 0);
         }
         else
@@ -174,15 +182,19 @@ public class BayMove : MonoBehaviour
             rb.transform.Rotate(0, _speedRotation, 0);
         }
 
+    }
+
+    void Movimento()
+    {
         // ###FOÇA DE MOVIMENTO###
         _speedMovement = rb.velocity.magnitude;
 
 
         // Verifica se a velocidade excede o limite máximo
-        if (_speedMovement > BattleSystem.speedMovementMax)
+        if (_speedMovement > speedMovementMax)
         {
             // Calcula a velocidade desejada para respeitar o limite
-            float velocidadeDesejadaMS = BattleSystem.speedMovementMax;
+            float velocidadeDesejadaMS = speedMovementMax;
             // Atualiza a velocidade do objeto para a velocidade desejada
             rb.velocity = rb.velocity.normalized * velocidadeDesejadaMS;
         }
@@ -193,7 +205,7 @@ public class BayMove : MonoBehaviour
             Vector3 _movX = transform.right * Random.Range(-variateMov, velMov);
             // Vector3 _movZ = transform.forward * Random.Range(-variateMov, variateMov);
 
-            float totalForceMov = Time.deltaTime * (BattleSystem.RPM * BattleSystem.RPS * BattleSystem.ajusteDoMovimento);
+            float totalForceMov = Time.deltaTime * (RPM * RPS * ajusteDoMovimento);
 
             // Aplica a força de direção ao objeto
             rb.AddForce(_movX * totalForceMov, ForceMode.Acceleration);
@@ -201,7 +213,7 @@ public class BayMove : MonoBehaviour
     }
     void GravitForce()
     {
-        if (RPS >= BattleSystem.minRPS)
+        if (RPS >= minRPS)
         {
             if (inFloor)
             {
@@ -209,7 +221,7 @@ public class BayMove : MonoBehaviour
                 rb.centerOfMass = COMDOWN.transform.localPosition;
 
                 // DOWNFORCE
-                rb.AddForce(-transform.up * BattleSystem.downForce * rb.velocity.magnitude);
+                rb.AddForce(-transform.up * downForce * rb.velocity.magnitude);
             }
             else
             {
@@ -218,7 +230,7 @@ public class BayMove : MonoBehaviour
             }
             bayBreak = false;
         }
-        else if (RPS <= BattleSystem.minRPS)
+        else if (RPS <= minRPS)
         {
             rb.centerOfMass = COMUP.transform.localPosition;
             velMov = 0;
@@ -235,7 +247,7 @@ public class BayMove : MonoBehaviour
         tempoDeParada += Time.deltaTime;
 
         // Verifica se passou 1 segundo
-        if (tempoDeParada >= BattleSystem.timeOff)
+        if (tempoDeParada >= timeOff)
         {
             spinLife = 0;
             bayBreak = true;
@@ -245,7 +257,7 @@ public class BayMove : MonoBehaviour
     public void BayOnFloor()
     {
         // Lança um raycast para baixo
-        if (Physics.Raycast(transform.position, Vector3.down, BattleSystem.distanceOnGround))
+        if (Physics.Raycast(transform.position, Vector3.down, distanceOnGround))
         {
             // O jogador está no chão
             //Debug.Log("Está no chão.");
