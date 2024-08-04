@@ -3,12 +3,16 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Stadium
+  - Grounded
+  - COM
+  - Collider
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Respawn
   - Water
   - UI
   - 
